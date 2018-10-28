@@ -1,13 +1,11 @@
 ﻿using Nest;
+using Newtonsoft.Json;
 using SI4T.Query.ElasticSearch.Models;
-using SI4T.Query.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SI4T.Query.ElasticSearch
 {
@@ -17,6 +15,10 @@ namespace SI4T.Query.ElasticSearch
         /// URL of the ElasticSearch Search endpoint
         /// </summary>
         public string ServiceUrl { get; set; }
+
+        public string UserId { get; set; }
+
+        public string Password { get; set; }
 
         /// <summary>
         /// Number of characters for auto-generated summary data
@@ -33,9 +35,11 @@ namespace SI4T.Query.ElasticSearch
         /// </summary>
         public int MaxNumberOfFacets { get; set; }
 
-        public Connection(string serviceUrl)
+        public Connection(string serviceUrl, string userId = null, string password = null)
         {
             ServiceUrl = serviceUrl;
+            UserId = userId;
+            Password = password;
             AutoSummarySize = 255;
             DefaultPageSize = 10;
             MaxNumberOfFacets = 100;
@@ -54,7 +58,7 @@ namespace SI4T.Query.ElasticSearch
 
             SearchRequest request = BuildSearchRequest(parameters);
 
-            var response = client.Search<SearchResult>(request);
+            ISearchResponse<object> response = client.Search<object>(request);
 
             result.Items = response.Hits.Select(hit => CreateSearchResult(hit)).ToList();
             //result.Facets = (
@@ -72,7 +76,6 @@ namespace SI4T.Query.ElasticSearch
             return result;
         }
 
-
         private SearchRequest BuildSearchRequest(NameValueCollection parameters)
         {
             string start = parameters["start"] ?? "1";
@@ -84,10 +87,67 @@ namespace SI4T.Query.ElasticSearch
             //    facet = "{" + facets + "}";
             //}
 
-            QueryContainer query = new MatchQuery
+            List<QueryContainer> mustClauses = new List<QueryContainer>();
+            List<QueryContainer> filterClauses = new List<QueryContainer>();
+
+            if (parameters["q"] != null)
             {
-                Field = "body",
-                Query = parameters["q"]
+                mustClauses.Add(new QueryStringQuery
+                {
+                    Query = parameters["q"],
+                    AnalyzeWildcard = false,
+                    Lenient = false
+                });
+            }
+
+            if (!string.IsNullOrEmpty(parameters["fq"]))
+            {
+                string[] filterQueryParameters = parameters["fq"].Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (string item in filterQueryParameters)
+                {
+                    string[] keyValue = item.Split(':');
+                    {
+                        if (keyValue.Length > 0)
+                        {
+                            if (keyValue[0] == "date")
+                            {
+                                string[] range = keyValue[1].Split(',');
+                                if (range.Length > 0)
+                                {
+                                    filterClauses.Add(new DateRangeQuery
+                                    {
+                                        Field = new Field("date"),
+                                        GreaterThanOrEqualTo = DateTime.ParseExact(range[0], "yyyy-MM-dd", CultureInfo.InvariantCulture),
+                                        LessThanOrEqualTo = DateTime.ParseExact(range[1], "yyyy-MM-dd", CultureInfo.InvariantCulture)
+                                    });
+                                }
+                                else
+                                {
+                                    filterClauses.Add(new TermQuery
+                                    {
+                                        Field = new Field("date"),
+                                        Value = keyValue[1]
+                                    });
+                                }
+                            }
+                            else
+                            {
+                                mustClauses.Add(new TermQuery
+                                {
+                                    Field = new Field(keyValue[0]),
+                                    Value = keyValue[1]
+                                });
+                            }
+                        }
+                    }
+
+                }
+            }
+
+            QueryContainer query = new BoolQuery
+            {
+                Must = mustClauses,
+                Filter = filterClauses
             };
 
             Highlight highlight = new Highlight
@@ -108,12 +168,25 @@ namespace SI4T.Query.ElasticSearch
                 }
             };
 
+            List<ISort> sort = new List<ISort>();
+
+            if (!string.IsNullOrEmpty(parameters["sort"]))
+            {
+                string[] sortQueryParameter = parameters["sort"].Split(new string[] { " " }, StringSplitOptions.RemoveEmptyEntries);
+
+                if (sortQueryParameter.Length > 0)
+                {
+                    sort.Add(new SortField { Field = sortQueryParameter[0], Order = sortQueryParameter[1] == "desc" ? SortOrder.Descending : SortOrder.Ascending });
+                }
+            }
+
             return new SearchRequest
             {
                 From = Convert.ToInt32(start) - 1, // SI4T uses 1 based indexing, but CloudSearch and Elasticsearch uses 0 based.
                 Size = Convert.ToInt32(rows),
                 Query = query,
-                Highlight = highlight
+                Highlight = highlight,
+                Sort = sort
             };
         }
 
@@ -122,29 +195,63 @@ namespace SI4T.Query.ElasticSearch
             string IndexName = string.Empty;
             string ElasticInstanceUri = string.Empty;
 
-            if(!string.IsNullOrEmpty(ServiceUrl))
+            if (!string.IsNullOrEmpty(ServiceUrl))
             {
                 IndexName = ServiceUrl.Split('/').Last();
                 ElasticInstanceUri = ServiceUrl.Substring(0, ServiceUrl.LastIndexOf("/"));
             }
 
-            var node = new Uri(ElasticInstanceUri);
-            var settings = new ConnectionSettings(node);
+            Uri node = new Uri(ElasticInstanceUri);
+            ConnectionSettings settings = new ConnectionSettings(node);
+            if (UserId != null && Password != null)
+            {
+                settings.BasicAuthentication(UserId, Password);
+            }
             settings.DefaultIndex(IndexName);
             return new ElasticClient(settings);
         }
 
-        private SI4T.Query.Models.SearchResult CreateSearchResult(IHit<SearchResult> hit)
+        private SI4T.Query.Models.SearchResult CreateSearchResult(IHit<object> hit)
         {
             SI4T.Query.Models.SearchResult result = new SI4T.Query.Models.SearchResult { Id = hit.Id };
+            Dictionary<string, object> fields = JsonConvert.DeserializeObject<Dictionary<string, object>>(hit.Source.ToString());
 
-            result.PublicationId = hit.Source.PublicationId;
-            result.Title = hit.Source.Title;
-            result.Url = hit.Source.Url;
-            result.Summary = hit.Source.Summary;
+            foreach (KeyValuePair<string, object> field in fields)
+            {
+                string type = field.Value.GetType().ToString();
+                string fieldname = field.Key;
 
-            //if (String.IsNullOrEmpty(result.Summary) && hit.Highlights.ContainsKey("body"))
-            if (hit.Highlights.ContainsKey("body"))
+                switch (fieldname)
+                {
+                    case "publicationid":
+                        result.PublicationId = int.Parse(field.Value.ToString());
+                        break;
+                    case "title":
+                        result.Title = field.Value.ToString();
+                        break;
+                    case "url":
+                        result.Url = field.Value.ToString();
+                        break;
+                    case "summary":
+                        result.Summary = field.Value.ToString();
+                        break;
+                    default:
+                        object data = null;
+                        switch (type)
+                        {
+                            case "arr": //TODO: Make smarter
+                                data = field.Value;
+                                break;
+                            default:
+                                data = field.Value.ToString();
+                                break;
+                        }
+                        result.CustomFields.Add(fieldname, data);
+                        break;
+                }
+            }
+
+            if (string.IsNullOrEmpty(result.Summary) && hit.Highlights.ContainsKey("body"))
             {
                 // If no summary field is present in the index, use the highlight fragment from the body field instead.
                 string autoSummary = hit.Highlights["body"].Highlights.FirstOrDefault();
@@ -159,6 +266,5 @@ namespace SI4T.Query.ElasticSearch
 
             return result;
         }
-
     }
 }
