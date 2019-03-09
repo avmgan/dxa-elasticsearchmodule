@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.Globalization;
-using System.Text.RegularExpressions;
 using Sdl.Web.Common.Configuration;
 using Sdl.Web.Common.Logging;
 using Sdl.Web.Common.Models;
@@ -70,7 +69,7 @@ namespace Sdl.Web.Modules.Search.Providers
         protected virtual NameValueCollection SetupParameters(SearchQuery searchQuery, Localization localization)
         {
             NameValueCollection result = new NameValueCollection(searchQuery.QueryStringParameters);
-            result["fq"] = "publicationid:" + localization.Id;
+            result["fq"] = "publicationid:" + localization.Id; // TODO: What about CM URI scheme?
             result["q"] = searchQuery.QueryText;
             result["start"] = searchQuery.Start.ToString(CultureInfo.InvariantCulture);
             result["rows"] = searchQuery.PageSize.ToString(CultureInfo.InvariantCulture);

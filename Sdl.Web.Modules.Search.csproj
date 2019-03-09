@@ -9,12 +9,13 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Sdl.Web.Modules.Search</RootNamespace>
     <AssemblyName>Sdl.Web.Modules.Search</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
-    <DxaFrameworkVersion>1.8.0</DxaFrameworkVersion>
+    <DxaDataModelVersion>2.1.0</DxaDataModelVersion>
+    <DxaFrameworkVersion>2.1.0</DxaFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -34,35 +35,45 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.11.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Sdl.Tridion.Api.Client">
+      <HintPath>packages\Sdl.Dxa.Framework.Web8.2.1.0\lib\net462\Sdl.Tridion.Api.Client.dll</HintPath>
+    </Reference>
+    <Reference Include="Sdl.Web.Common, Version=2.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\Sdl.Dxa.Framework.Web8.2.1.0\lib\net462\Sdl.Web.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="Sdl.Web.Mvc, Version=2.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\Sdl.Dxa.Framework.Web8.2.1.0\lib\net462\Sdl.Web.Mvc.dll</HintPath>
+    </Reference>
+    <Reference Include="Sdl.Web.Tridion">
+      <HintPath>packages\Sdl.Dxa.Framework.Web8.2.1.0\lib\net462\Sdl.Web.Tridion.dll</HintPath>
+    </Reference>
+    <Reference Include="SI4T.Query">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\SI4T.Query.1.0.2\lib\net40\SI4T.Query.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Web" />
-    <Reference Include="System.Web.Helpers, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.Helpers.dll</HintPath>
-    </Reference>
     <Reference Include="System.Web.Mvc, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.AspNet.Mvc.5.2.3\lib\net45\System.Web.Mvc.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Web.Razor, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.AspNet.Razor.3.2.3\lib\net45\System.Web.Razor.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Web.WebPages, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.WebPages.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Web.WebPages.Deployment, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.WebPages.Deployment.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Web.WebPages.Razor, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.WebPages.Razor.dll</HintPath>
+      <HintPath>packages\Microsoft.AspNet.Mvc.5.2.3\lib\net45\System.Web.Mvc.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Controllers\TridionDocsSearchController.cs" />
+    <Compile Include="Data\SearchParameters.cs" />
+    <Compile Include="Data\SearchResult.cs" />
+    <Compile Include="Data\SearchResultSet.cs" />
     <Compile Include="DxaSearchException.cs" />
     <Compile Include="Models\SearchItem.cs" />
     <Compile Include="Providers\ElasticSearchProvider.cs" />
+    <Compile Include="Providers\IQSearchProvider.cs" />
     <Compile Include="Providers\SI4TSearchProvider.cs" />
     <Compile Include="Providers\ISearchProvider.cs" />
-    <Compile Include="..\CommonAssemblyInfo.cs" />
+    <Compile Include="CommonAssemblyInfo.cs" />
     <Compile Include="Controllers\SearchController.cs" />
     <Compile Include="Providers\AwsCloudSearchProvider.cs" />
     <Compile Include="Providers\SolrProvider.cs" />
@@ -72,6 +83,7 @@
     <Compile Include="SearchAreaRegistration.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config" />
     <None Include="Areas\Search\Views\Entity\SearchItem.cshtml" />
     <None Include="Areas\Search\Views\Entity\SearchBox.cshtml" />
     <None Include="Areas\Search\Views\Search\Partials\Pager.cshtml" />
@@ -82,14 +94,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Sdl.Web.Common\Sdl.Web.Common.csproj">
-      <Project>{21c08f9a-24c2-481a-95c3-a255be9771a7}</Project>
-      <Name>Sdl.Web.Common</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Sdl.Web.Mvc\Sdl.Web.Mvc.csproj">
-      <Project>{923b2009-9a0b-4425-88a5-bf7af25c8f8b}</Project>
-      <Name>Sdl.Web.Mvc</Name>
-    </ProjectReference>
     <ProjectReference Include="SI4T.Query.CloudSearch\SI4T.Query.CloudSearch.csproj">
       <Project>{490799b2-f577-4638-9644-8369bdbd56c4}</Project>
       <Name>SI4T.Query.CloudSearch</Name>
@@ -111,11 +115,11 @@ xcopy "$(TargetDir)*.*" "%25DXA_SITE_DIR%25\bin" /Y
 xcopy "$(ProjectDir)Areas" "%25DXA_SITE_DIR%25\Areas" /S /I /Y
 )</PostBuildEvent>
   </PropertyGroup>
-  <Import Project="..\packages\Sdl.Dxa.Framework.Web8.$(DxaFrameworkVersion)\build\net452\Sdl.Dxa.Framework.Web8.targets" Condition="Exists('..\packages\Sdl.Dxa.Framework.Web8.$(DxaFrameworkVersion)\build\net452\Sdl.Dxa.Framework.Web8.targets')" />
+  <Import Project="packages\Sdl.Dxa.Framework.Web8.2.1.0\build\net462\Sdl.Dxa.Framework.Web8.targets" Condition="Exists('packages\Sdl.Dxa.Framework.Web8.2.1.0\build\net462\Sdl.Dxa.Framework.Web8.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\Sdl.Dxa.Framework.Web8.$(DxaFrameworkVersion)\build\net452\Sdl.Dxa.Framework.Web8.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Sdl.Dxa.Framework.Web8.$(DxaFrameworkVersion)\build\net452\Sdl.Dxa.Framework.Web8.targets')))" />
+    <Error Condition="!Exists('packages\Sdl.Dxa.Framework.Web8.2.1.0\build\net462\Sdl.Dxa.Framework.Web8.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Sdl.Dxa.Framework.Web8.2.1.0\build\net462\Sdl.Dxa.Framework.Web8.targets'))" />
   </Target>
 </Project>
